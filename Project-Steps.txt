@@ -1,0 +1,187 @@
+# 🚀 Jenkins GitHub Webhook Integration – Auto Build & Email Notification
+
+## 🧠 **Objective**
+
+The goal of this task is to:
+
+1. Create a **simple script file** (e.g., a shell script).
+2. Push it to a **GitHub repository**.
+3. Connect your GitHub repo to a **Jenkins project**.
+4. Whenever you push a new commit to GitHub, Jenkins should **automatically trigger a build** (using a **webhook**) and then **send you an email notification** 📧 with the build result.
+
+---
+
+## ⚙️ **Tech Stack Used**
+
+* ☁️ **AWS EC2 (Ubuntu)** – Host Jenkins
+* 🧰 **GitHub** – Store your project/script
+* ⚙️ **Jenkins** – Automate builds & send notifications
+
+---
+
+## 🧩 **Prerequisites**
+
+Before starting, make sure you have the following ready:
+✅ Jenkins installed and running (from your previous task)
+✅ Port **8080** open in your EC2 Security Group
+✅ A working **GitHub account**
+✅ **Java** installed on the EC2 instance
+✅ Outbound internet access from EC2 (for Jenkins to reach GitHub & send emails)
+
+---
+
+## 🪜 **Steps to Perform**
+
+### 1️⃣ **Create a Simple Script File**
+
+On your **local system** or **EC2 instance**, create a simple script named `build.sh`:
+
+```bash
+#!/bin/bash
+echo "✅ Jenkins build triggered successfully!"
+date
+```
+
+Make it executable:
+
+```bash
+chmod +x build.sh
+```
+
+---
+
+### 2️⃣ **Push Script to GitHub Repo**
+
+* Create a new GitHub repository (e.g., `jenkins-webhook-demo`)
+* Initialize git and push your script:
+
+  ```bash
+  git init
+  git add build.sh
+  git commit -m "Initial commit"
+  git branch -M main
+  git remote add origin https://github.com/<your-username>/jenkins-webhook-demo.git
+  git push -u origin main
+  ```
+
+---
+
+### 3️⃣ **Install Required Jenkins Plugins**
+
+On your Jenkins dashboard:
+🧩 Go to **Manage Jenkins → Plugins → Available Plugins**
+Search and install:
+
+* ✅ **Git plugin**
+* ✅ **GitHub Integration plugin**
+* ✅ **Email Extension Plugin**
+
+Restart Jenkins after installation.
+
+---
+
+### 4️⃣ **Configure Email Notification in Jenkins**
+
+To send build result via email:
+
+1. Go to **Manage Jenkins → System**
+2. Find **“Extended E-mail Notification”** section
+3. Add:
+
+   * SMTP Server: `smtp.gmail.com`
+   * Use Authentication → enter your Gmail credentials (use App Password if 2FA enabled)
+   * Default user e-mail suffix: `@gmail.com`
+4. Click **Apply and Save**
+5. Test email by sending a test message 📧
+
+---
+
+### 5️⃣ **Create a Jenkins Project Connected to GitHub**
+
+1. On Jenkins Dashboard → click **New Item**
+2. Enter a name (e.g., *GitHub-Auto-Build*)
+3. Choose **Freestyle project** → click OK
+
+In project configuration:
+
+* Under **Source Code Management → Git**
+
+  * Paste your repo URL:
+
+    ```
+    https://github.com/<your-username>/jenkins-webhook-demo.git
+    ```
+* Add credentials if required (GitHub personal access token).
+
+---
+
+### 6️⃣ **Set Up GitHub Webhook (Auto Build Trigger)**
+
+Now connect GitHub → Jenkins using a webhook 🔗
+
+#### In GitHub:
+
+1. Go to your repo → **Settings → Webhooks → Add webhook**
+2. Payload URL:
+
+   ```
+   http://<your-ec2-public-ip>:8080/github-webhook/
+   ```
+3. Content type: `application/json`
+4. Select “Just the push event”
+5. Click **Add Webhook**
+
+#### In Jenkins (Job Configuration):
+
+* Under **Build Triggers**, check ✅ **GitHub hook trigger for GITScm polling**
+* Under **Build Steps**, choose **Execute Shell** and enter:
+
+  ```bash
+  bash build.sh
+  ```
+* Under **Post-build Actions → Editable Email Notification**
+
+  * Add recipient email
+  * Add subject: `Jenkins Build Result: $BUILD_STATUS`
+  * Add content:
+
+    ```
+    Jenkins build for project "$PROJECT_NAME" finished with status: $BUILD_STATUS
+    Console output: $BUILD_URL/console
+    ```
+* Save the configuration.
+
+---
+
+### 7️⃣ **Test the Setup**
+
+1. Make a small change in your script locally, for example:
+
+   ```bash
+   echo "Build triggered from GitHub commit!"
+   ```
+2. Commit and push to GitHub:
+
+   ```bash
+   git add .
+   git commit -m "Testing webhook trigger"
+   git push
+   ```
+3. Check Jenkins → it should **automatically start a new build** 🧩
+4. After the build completes, you’ll receive a **build status email** 🎉
+
+---
+
+## 🧹 **Cleanup (Optional)**
+
+To stop or remove Jenkins and free resources on EC2:
+
+```bash
+sudo systemctl stop jenkins
+sudo apt remove --purge jenkins -y
+sudo apt autoremove -y
+```
+
+Or simply **terminate the EC2 instance** from the AWS console.
+
+---
